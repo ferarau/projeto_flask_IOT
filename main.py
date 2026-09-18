@@ -7,7 +7,7 @@ from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-# String de conexão do Neon
+# String de conexão do Neon (com fallback para uso local)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://neondb_owner:npg_GLjWDmA36aUv@ep-cool-sunset-b477wxcp-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
@@ -58,16 +58,16 @@ def on_message(client, userdata, msg):
         print(f"[MQTT Erro] Falha ao processar mensagem: {e}")
 
 
-# Inicialização do Cliente MQTT v2 em segundo plano
-mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-
-try:
-    mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    mqtt_client.loop_start()
-except Exception as e:
-    print(f"Erro ao conectar no MQTT: {e}")
+# Inicialização do Cliente MQTT (Executa apenas localmente, sem travar a Vercel)
+if not os.getenv("VERCEL"):
+    try:
+        mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        mqtt_client.on_connect = on_connect
+        mqtt_client.on_message = on_message
+        mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        mqtt_client.loop_start()
+    except Exception as e:
+        print(f"Erro ao conectar no MQTT: {e}")
 
 
 # Rotas da API Flask
